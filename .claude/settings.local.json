@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm install)",
+      "Bash(npx playwright install:*)",
+      "Bash(node -e:*)",
+      "Bash(timeout:*)",
+      "Bash(test -d /c/Users/schmi/Documents/Projects/ingatlan-ai/.git)",
+      "Bash(test -f /c/Users/schmi/Documents/Projects/ingatlan-ai/.gitignore)",
+      "Bash(test -d /c/Users/schmi/Documents/Projects/ingatlan-ai/.github)",
+      "Bash(node generate-static.js)"
+    ]
+  }
+}

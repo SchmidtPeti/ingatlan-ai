@@ -1,0 +1,1592 @@
+<!DOCTYPE html>
+<html lang="hu" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ingatlan AI - Budapest Lakáskereső</title>
+  <style>
+    /* ===== THEME VARIABLES ===== */
+    :root[data-theme="dark"] {
+      --bg: #0d1117;
+      --surface: #161b22;
+      --card: #21262d;
+      --card-hover: #2d333b;
+      --border: #30363d;
+      --text: #e6edf3;
+      --text-muted: #8b949e;
+      --accent: #58a6ff;
+      --accent-dim: #1f6feb33;
+      --success: #3fb950;
+      --success-dim: #1a4b2033;
+      --warning: #d29922;
+      --warning-dim: #3d280e33;
+      --danger: #f85149;
+      --danger-dim: #3d1412;
+      --shadow: 0 4px 16px rgba(0,0,0,0.4);
+      --radius: 10px;
+    }
+
+    :root[data-theme="light"] {
+      --bg: #f6f8fa;
+      --surface: #ffffff;
+      --card: #ffffff;
+      --card-hover: #f6f8fa;
+      --border: #d0d7de;
+      --text: #1f2328;
+      --text-muted: #636c76;
+      --accent: #0969da;
+      --accent-dim: #ddf4ff;
+      --success: #1a7f37;
+      --success-dim: #dafbe1;
+      --warning: #9a6700;
+      --warning-dim: #fff8c5;
+      --danger: #cf222e;
+      --danger-dim: #ffebe9;
+      --shadow: 0 4px 16px rgba(0,0,0,0.08);
+      --radius: 10px;
+    }
+
+    /* ===== RESET & BASE ===== */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      font-size: 15px;
+    }
+
+    a { color: var(--accent); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    /* ===== HEADER ===== */
+    header {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 0 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 60px;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      gap: 16px;
+    }
+
+    .header-left {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      min-width: 0;
+    }
+
+    header h1 {
+      font-size: 18px;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+
+    #last-updated {
+      font-size: 12px;
+      color: var(--text-muted);
+      white-space: nowrap;
+    }
+
+    .header-right {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-shrink: 0;
+    }
+
+    select {
+      background: var(--card);
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 6px 10px;
+      font-size: 13px;
+      cursor: pointer;
+    }
+
+    button {
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      padding: 7px 16px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: opacity 0.15s;
+      white-space: nowrap;
+    }
+
+    button:hover:not(:disabled) { opacity: 0.85; }
+    button:disabled { opacity: 0.45; cursor: not-allowed; }
+
+    #theme-toggle {
+      background: var(--card);
+      color: var(--text);
+      border: 1px solid var(--border);
+      padding: 6px 10px;
+      font-size: 15px;
+    }
+
+    /* ===== MAIN LAYOUT ===== */
+    main {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 24px 20px 60px;
+    }
+
+    section {
+      margin-bottom: 48px;
+    }
+
+    h2 {
+      font-size: 20px;
+      font-weight: 700;
+      margin-bottom: 20px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    /* ===== PROGRESS OVERLAY ===== */
+    #progress-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.7);
+      z-index: 200;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    #progress-overlay.hidden { display: none; }
+
+    .progress-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 32px 40px;
+      width: 420px;
+      max-width: 90vw;
+      text-align: center;
+      box-shadow: var(--shadow);
+    }
+
+    .spinner {
+      width: 40px;
+      height: 40px;
+      border: 3px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin: 0 auto 20px;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    #progress-message {
+      font-size: 15px;
+      font-weight: 600;
+      margin-bottom: 8px;
+    }
+
+    #progress-step {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-bottom: 16px;
+    }
+
+    .progress-bar {
+      background: var(--border);
+      border-radius: 4px;
+      height: 6px;
+      overflow: hidden;
+    }
+
+    #progress-fill {
+      background: var(--accent);
+      height: 100%;
+      width: 0%;
+      transition: width 0.3s ease;
+      border-radius: 4px;
+    }
+
+    /* ===== EMPTY STATE ===== */
+    .empty-state {
+      text-align: center;
+      padding: 60px 20px;
+      color: var(--text-muted);
+    }
+
+    .empty-state p { margin-bottom: 8px; }
+
+    /* ===== LISTING CARDS ===== */
+    #top-cards {
+      display: grid;
+      gap: 24px;
+    }
+
+    .listing-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 24px;
+      box-shadow: var(--shadow);
+      transition: border-color 0.15s;
+    }
+
+    .listing-card:hover { border-color: var(--accent); }
+
+    .card-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 16px;
+      margin-bottom: 16px;
+      flex-wrap: wrap;
+    }
+
+    .card-location {
+      font-size: 14px;
+      color: var(--text-muted);
+    }
+
+    .score-badge {
+      font-size: 22px;
+      font-weight: 800;
+      padding: 6px 14px;
+      border-radius: 8px;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+
+    .score-green { background: var(--success-dim); color: var(--success); }
+    .score-yellow { background: var(--warning-dim); color: var(--warning); }
+    .score-red { background: var(--danger-dim); color: var(--danger); }
+
+    .card-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+
+    .meta-chip {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 4px 10px;
+      font-size: 13px;
+      white-space: nowrap;
+    }
+
+    .meta-chip.price {
+      background: var(--accent-dim);
+      border-color: var(--accent);
+      color: var(--accent);
+      font-weight: 700;
+    }
+
+    .recommendation-badge {
+      display: inline-block;
+      padding: 5px 14px;
+      border-radius: 6px;
+      font-size: 13px;
+      font-weight: 700;
+      margin-bottom: 16px;
+    }
+
+    .rec-ajanlott { background: var(--success-dim); color: var(--success); }
+    .rec-megfontolhato { background: var(--warning-dim); color: var(--warning); }
+    .rec-nem-ajanlott { background: var(--danger-dim); color: var(--danger); }
+
+    .card-summary {
+      color: var(--text);
+      margin-bottom: 20px;
+      line-height: 1.7;
+    }
+
+    /* Card images */
+    .card-images {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 16px;
+      overflow: hidden;
+      border-radius: 8px;
+    }
+
+    .card-images img {
+      width: calc(33.33% - 6px);
+      height: 140px;
+      object-fit: cover;
+      border-radius: 6px;
+      background: var(--border);
+    }
+
+    /* Accordion (details/summary) */
+    details {
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      margin-bottom: 10px;
+      overflow: hidden;
+    }
+
+    details summary {
+      padding: 12px 16px;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 14px;
+      list-style: none;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      user-select: none;
+      background: var(--surface);
+    }
+
+    details summary::-webkit-details-marker { display: none; }
+
+    details summary::before {
+      content: '?';
+      font-size: 10px;
+      transition: transform 0.2s;
+      flex-shrink: 0;
+    }
+
+    details[open] summary::before { transform: rotate(90deg); }
+
+    details[open] summary { border-bottom: 1px solid var(--border); }
+
+    .details-content {
+      padding: 16px;
+      background: var(--card);
+    }
+
+    .pros-cons {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+
+    @media (max-width: 600px) {
+      .pros-cons { grid-template-columns: 1fr; }
+    }
+
+    .pros-cons ul {
+      list-style: none;
+      padding: 0;
+    }
+
+    .pros-cons li {
+      padding: 6px 0;
+      border-bottom: 1px solid var(--border);
+      font-size: 14px;
+    }
+
+    .pros-cons li:last-child { border-bottom: none; }
+
+    .pros-list li::before { content: '+ '; color: var(--success); }
+    .cons-list li::before { content: '- '; }
+
+    .red-flags-list li::before { content: '! '; }
+    .red-flags-list li { color: var(--danger); }
+
+    .tips-list li::before { content: '> '; }
+
+    details p {
+      font-size: 14px;
+      line-height: 1.7;
+      margin-bottom: 12px;
+    }
+
+    details p:last-child { margin-bottom: 0; }
+
+    details ul {
+      list-style: none;
+      padding: 0;
+    }
+
+    details ul li {
+      padding: 6px 0;
+      font-size: 14px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    details ul li:last-child { border-bottom: none; }
+
+    .col-header {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--text-muted);
+      margin-bottom: 8px;
+    }
+
+    .total-cost {
+      font-size: 13px;
+      color: var(--text-muted);
+      margin-bottom: 20px;
+    }
+
+    .total-cost strong { color: var(--text); }
+
+    .btn-link {
+      display: inline-block;
+      margin-top: 8px;
+      padding: 10px 20px;
+      background: var(--accent);
+      color: #fff;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      text-decoration: none;
+      transition: opacity 0.15s;
+    }
+
+    .btn-link:hover { opacity: 0.85; text-decoration: none; }
+
+    /* ===== FILTER BAR ===== */
+    .filter-bar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-bottom: 20px;
+      padding: 16px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+    }
+
+    .filter-bar input,
+    .filter-bar select {
+      flex: 1 1 150px;
+      min-width: 120px;
+    }
+
+    .filter-bar input {
+      background: var(--card);
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 7px 10px;
+      font-size: 13px;
+    }
+
+    .filter-bar input::placeholder { color: var(--text-muted); }
+    .filter-bar input:focus { outline: none; border-color: var(--accent); }
+
+    .btn-secondary {
+      background: var(--card);
+      color: var(--text);
+      border: 1px solid var(--border);
+    }
+
+    /* ===== TABLE ===== */
+    .table-wrapper {
+      overflow-x: auto;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+
+    thead {
+      background: var(--surface);
+    }
+
+    th {
+      padding: 12px 14px;
+      text-align: left;
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+      color: var(--text-muted);
+      border-bottom: 1px solid var(--border);
+      white-space: nowrap;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    th:hover { color: var(--text); }
+
+    td {
+      padding: 11px 14px;
+      border-bottom: 1px solid var(--border);
+      white-space: nowrap;
+      max-width: 200px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    tr:last-child td { border-bottom: none; }
+
+    tr:hover td { background: var(--card-hover); }
+
+    .tag {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 11px;
+      font-weight: 600;
+    }
+
+    .tag-yes { background: var(--success-dim); color: var(--success); }
+    .tag-no { background: var(--danger-dim); color: var(--danger); }
+    .tag-unknown { background: var(--border); color: var(--text-muted); }
+
+    #table-count {
+      font-size: 13px;
+      color: var(--text-muted);
+      margin-bottom: 10px;
+    }
+
+    /* ===== MISC ===== */
+    .text-muted { color: var(--text-muted); }
+
+    .error-msg {
+      background: var(--danger-dim);
+      border: 1px solid var(--danger);
+      color: var(--danger);
+      padding: 12px 16px;
+      border-radius: 8px;
+      font-size: 14px;
+    }
+
+    .warning-banner {
+      background: var(--warning-dim);
+      border: 1px solid var(--warning);
+      color: var(--warning);
+      border-radius: 8px;
+      padding: 12px 14px;
+      font-size: 13px;
+      margin-bottom: 18px;
+    }
+
+    .warning-banner.hidden {
+      display: none;
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    .paused-panel {
+      margin-top: 14px;
+      text-align: left;
+      border: 1px solid var(--warning);
+      background: var(--warning-dim);
+      border-radius: 8px;
+      padding: 12px;
+      font-size: 13px;
+      color: var(--warning);
+    }
+
+    .paused-actions {
+      margin-top: 10px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .btn-danger {
+      background: var(--danger);
+    }
+
+    #pause-timeout {
+      margin-top: 6px;
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    /* ===== MODAL ===== */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.7);
+      z-index: 1000;
+      overflow-y: auto;
+    }
+    .modal-overlay.active { display: flex; align-items: flex-start; justify-content: center; padding: 2rem 1rem; }
+    .modal-box {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      max-width: 720px;
+      width: 100%;
+      padding: 1.5rem;
+      position: relative;
+      margin: auto;
+    }
+    .modal-close {
+      position: absolute;
+      top: 1rem;
+      right: 1rem;
+      background: none;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 4px 10px;
+      cursor: pointer;
+      color: var(--text-muted);
+      font-size: 1rem;
+    }
+    .modal-close:hover { border-color: var(--accent); color: var(--accent); }
+    .modal-title { font-size: 1.15rem; font-weight: 700; margin-bottom: 4px; padding-right: 2.5rem; }
+    .modal-subtitle { font-size: 0.88rem; color: var(--text-muted); margin-bottom: 1rem; }
+    .modal-hero {
+      display: flex;
+      gap: 2rem;
+      flex-wrap: wrap;
+      padding: 1rem;
+      background: var(--surface);
+      border-radius: 8px;
+      margin-bottom: 1rem;
+    }
+    .modal-hero-label { font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; }
+    .modal-hero-value { font-size: 1.1rem; font-weight: 700; }
+    .modal-section { margin-top: 1rem; }
+    .modal-section h4 {
+      font-size: 0.78rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 8px;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 4px;
+    }
+    .modal-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0 16px; }
+    .modal-row { display: flex; justify-content: space-between; gap: 8px; padding: 5px 0; font-size: 13px; border-bottom: 1px solid var(--border); }
+    .modal-row:last-child { border-bottom: none; }
+    .modal-row-label { color: var(--text-muted); }
+    .modal-row-value { font-weight: 500; text-align: right; }
+    .modal-desc { font-size: 13px; color: var(--text); line-height: 1.6; max-height: 180px; overflow-y: auto; padding: 8px 0; }
+    .modal-actions { margin-top: 1.25rem; }
+    .modal-tr-hint { font-size: 12px; color: var(--text-muted); text-align: center; margin-top: 6px; }
+    tbody tr { cursor: pointer; }
+    @media (max-width: 600px) {
+      .modal-grid { grid-template-columns: 1fr; }
+      .modal-hero { gap: 1rem; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ===== HEADER ===== -->
+<header>
+  <div class="header-left">
+    <h1>Ingatlan AI</h1>
+    <span id="last-updated"></span>
+  </div>
+  <div class="header-right">
+    <select id="date-selector" title="Korábbi napok"></select>
+    <button id="run-btn" onclick="triggerRun()">Frissítés</button>
+    <button id="analyze-btn" onclick="triggerAnalyze()" style="background:var(--success)">AI Elemzés</button>
+    <button id="theme-toggle" onclick="toggleTheme()" title="Téma váltás">Téma</button>
+  </div>
+</header>
+
+<!-- ===== PROGRESS OVERLAY ===== -->
+<div id="progress-overlay" class="hidden">
+  <div class="progress-card">
+    <div class="spinner" id="progress-spinner"></div>
+    <p id="progress-message">Indítás...</p>
+    <p id="progress-step" class="text-muted"></p>
+    <div class="progress-bar">
+      <div id="progress-fill"></div>
+    </div>
+    <div id="pause-panel" class="paused-panel hidden">
+      <div id="pause-reason">Challenge detektalva.</div>
+      <div id="pause-timeout"></div>
+      <div class="paused-actions">
+        <button id="resume-btn" onclick="resumeRun()">Folytatas</button>
+        <button id="fallback-btn" class="btn-secondary" onclick="fallbackRun()">Fallback mentes</button>
+        <button id="cancel-btn" class="btn-danger" onclick="cancelRun()">Leallitas</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== MAIN ===== -->
+<main>
+  <div id="scrape-warning" class="warning-banner hidden"></div>
+
+  <!-- Top listings -->
+  <section id="top-section">
+    <h2>Top <span id="top-count">5</span> AI-ajánlott lakás</h2>
+    <div id="top-cards">
+      <div class="empty-state">
+        <p>Még nincs elemzés.</p>
+        <p>Kattints a <strong>Frissítés</strong> gombra az első scrape indításához!</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Full table -->
+  <section id="table-section">
+    <h2>Összes hirdetés</h2>
+    <div class="filter-bar">
+      <input id="f-district" placeholder="Kerület (pl. VI, VII)" oninput="renderTable()">
+      <input id="f-price-max" placeholder="Max ár (Ft/hó)" type="number" oninput="renderTable()">
+      <input id="f-area-min" placeholder="Min m²" type="number" oninput="renderTable()">
+      <select id="f-elevator" onchange="renderTable()">
+        <option value="">Lift (mind)</option>
+        <option value="yes">Van lift</option>
+        <option value="no">Nincs lift</option>
+      </select>
+      <select id="f-furnished" onchange="renderTable()">
+        <option value="">Bútor (mind)</option>
+        <option value="yes">Bútorozva</option>
+        <option value="no">Bútorozatlan</option>
+      </select>
+      <button class="btn-secondary" onclick="resetFilters()">Törlés</button>
+    </div>
+    <p id="table-count"></p>
+    <div class="table-wrapper">
+      <table>
+        <thead>
+          <tr>
+            <th onclick="sortTable('district')">Kerület</th>
+            <th onclick="sortTable('price_huf_monthly')">Ár</th>
+            <th onclick="sortTable('area_sqm')">Terület</th>
+            <th onclick="sortTable('rooms')">Szobák</th>
+            <th>Emelet</th>
+            <th>Lift</th>
+            <th>Bútor</th>
+            <th>Kisállat</th>
+            <th onclick="sortTable('utilities_huf')">Rezsi</th>
+            <th>Link</th>
+          </tr>
+        </thead>
+        <tbody id="table-body"></tbody>
+      </table>
+    </div>
+  </section>
+
+</main>
+
+<script>
+// ===== STATE =====
+const state = {
+  data: null,
+  theme: localStorage.getItem('theme') || 'dark',
+  sortKey: null,
+  sortDir: 1,
+  eventSource: null,
+  runtimeWarnings: [],
+  pauseInfo: {
+    active: false,
+    timeoutAt: null,
+    intervalId: null,
+    challengeUrl: null,
+  },
+};
+
+// Apply saved theme
+document.documentElement.setAttribute('data-theme', state.theme);
+document.getElementById('theme-toggle').textContent = state.theme === 'dark' ? 'Light' : 'Dark';
+
+// ===== INIT =====
+async function init() {
+  await loadHistory();
+  await loadLatest();
+}
+
+// ===== API =====
+async function loadLatest() {
+  try {
+    const resp = await fetch('/api/latest');
+    if (!resp.ok) {
+      const err = await resp.json().catch(() => ({ error: 'Ismeretlen hiba' }));
+      renderEmpty(err.error);
+      return;
+    }
+    state.data = await resp.json();
+    renderAll();
+  } catch (e) {
+    renderEmpty('Szerver nem elérhető. Indítsd el: node server.js');
+  }
+}
+
+async function loadHistory() {
+  try {
+    const resp = await fetch('/api/history');
+    const dates = await resp.json();
+    const sel = document.getElementById('date-selector');
+    sel.innerHTML = '<option value="">Legutóbbi</option>' +
+      dates.map(d => `<option value="${d}">${d}</option>`).join('');
+    sel.onchange = () => {
+      if (sel.value) loadHistoryDate(sel.value);
+      else loadLatest();
+    };
+  } catch (e) { /* ignore */ }
+}
+
+async function loadHistoryDate(date) {
+  try {
+    const resp = await fetch(`/api/history/${date}`);
+    if (!resp.ok) return;
+    state.data = await resp.json();
+    renderAll();
+  } catch (e) { /* ignore */ }
+}
+
+// ===== TRIGGER RUN =====
+function setRunButtonsDisabled(disabled) {
+  ['run-btn', 'analyze-btn'].forEach(id => {
+    const b = document.getElementById(id);
+    if (b) b.disabled = !!disabled;
+  });
+}
+
+async function triggerRun() {
+  setRunButtonsDisabled(true);
+  state.runtimeWarnings = [];
+  hidePausedPanel();
+  renderScrapeWarning();
+  document.getElementById('progress-overlay').classList.remove('hidden');
+  updateProgress('Indítás...', '');
+
+  try {
+    const resp = await fetch('/api/run', { method: 'POST' });
+    if (resp.status === 409) {
+      // Already running, just connect to SSE
+    } else if (!resp.ok) {
+      const err = await resp.json().catch(() => ({}));
+      showProgressError(err.error || 'Hiba a folyamat indításakor');
+      setRunButtonsDisabled(false);
+      return;
+    }
+  } catch (e) {
+    showProgressError('Szerver nem elérhető');
+    setRunButtonsDisabled(false);
+    return;
+  }
+
+  startSSE();
+}
+
+async function triggerAnalyze() {
+  setRunButtonsDisabled(true);
+  state.runtimeWarnings = [];
+  hidePausedPanel();
+  renderScrapeWarning();
+  document.getElementById('progress-overlay').classList.remove('hidden');
+  updateProgress('AI elemzés indítása...', '');
+
+  try {
+    const resp = await fetch('/api/analyze', { method: 'POST' });
+    if (resp.status === 409) {
+      // Already running, just connect to SSE
+    } else if (!resp.ok) {
+      const err = await resp.json().catch(() => ({}));
+      showProgressError(err.error || 'Hiba az elemzés indításakor');
+      setRunButtonsDisabled(false);
+      return;
+    }
+  } catch (e) {
+    showProgressError('Szerver nem elérhető');
+    setRunButtonsDisabled(false);
+    return;
+  }
+
+  startSSE();
+}
+
+// ===== SSE =====
+function startSSE() {
+  if (state.eventSource) {
+    state.eventSource.close();
+    state.eventSource = null;
+  }
+
+  const es = new EventSource('/api/run/status');
+  state.eventSource = es;
+
+  es.onmessage = (e) => {
+    try {
+      handleSSEEvent(JSON.parse(e.data));
+    } catch (ex) { /* ignore parse errors */ }
+  };
+
+  es.onerror = () => {
+    hideProgress();
+    setRunButtonsDisabled(false);
+    es.close();
+  };
+}
+
+function handleSSEEvent(event) {
+  const fill = document.getElementById('progress-fill');
+
+  const stepLabels = {
+    state: null,
+    started: 'Inditas',
+    scraping: 'Adatgyujtes (Playwright)',
+    scraping_done: 'Adatgyujtes kesz',
+    analyzing: 'AI elemzes (Claude)',
+    paused: 'Felfuggesztve',
+    resumed: 'Folytatva',
+    done: 'Kesz!',
+    error: 'Hiba',
+  };
+
+  const step = stepLabels[event.type];
+  if (step) updateProgress(event.message || step, step);
+
+  if (event.progress != null) {
+    fill.style.width = (event.progress * 100) + '%';
+  }
+
+  if (event.type === 'paused') {
+    showPausedPanel(event);
+    return;
+  }
+
+  if (event.type === 'resumed') {
+    hidePausedPanel();
+    return;
+  }
+
+  if (event.type === 'warning') {
+    state.runtimeWarnings.push({
+      code: event.code || 'WARNING',
+      message: event.message || 'Figyelmeztetes',
+      timestamp: event.timestamp || new Date().toISOString(),
+    });
+    updateProgress(event.message || 'Figyelmeztetes', 'Figyelmeztetes');
+    renderScrapeWarning();
+    return;
+  }
+
+  if (event.type === 'done') {
+    fill.style.width = '100%';
+    hidePausedPanel();
+    updateProgress('Kesz! Eredmenyek betoltese...', 'Kesz');
+    setTimeout(async () => {
+      await loadLatest();
+      await loadHistory();
+      hideProgress();
+      setRunButtonsDisabled(false);
+      if (state.eventSource) {
+        state.eventSource.close();
+        state.eventSource = null;
+      }
+    }, 1500);
+  }
+
+  if (event.type === 'error') {
+    hidePausedPanel();
+    showProgressError(event.message || 'Ismeretlen hiba');
+    setTimeout(() => {
+      hideProgress();
+      setRunButtonsDisabled(false);
+    }, 4000);
+  }
+
+  if (event.type === 'state') {
+    if (Array.isArray(event.warnings)) {
+      state.runtimeWarnings = event.warnings.map(w => ({
+        code: w.code || 'WARNING',
+        message: w.message || 'Figyelmeztetes',
+        timestamp: w.timestamp || new Date().toISOString(),
+      }));
+      renderScrapeWarning();
+    }
+    if (event.isRunning) {
+      setRunButtonsDisabled(true);
+      document.getElementById('progress-overlay').classList.remove('hidden');
+      if (event.isPaused) {
+        showPausedPanel({
+          reason: event.pause_reason,
+          message: event.lastMessage || 'Run paused',
+          pause_timeout_at: event.pause_timeout_at,
+          challenge_url: event.challenge_url,
+          detail_attempted: event.detail_attempted,
+          detail_blocked: event.detail_blocked,
+        });
+      } else {
+        hidePausedPanel();
+      }
+    } else {
+      hidePausedPanel();
+      hideProgress();
+      setRunButtonsDisabled(false);
+    }
+  }
+}
+function updateProgress(message, step) {
+  document.getElementById('progress-message').textContent = message || '';
+  document.getElementById('progress-step').textContent = step || '';
+}
+
+function showProgressError(message) {
+  const msg = document.getElementById('progress-message');
+  msg.textContent = 'X ' + message;
+  msg.style.color = 'var(--danger)';
+  document.getElementById('progress-step').textContent = 'Hiba';
+}
+
+function setPauseButtonsDisabled(disabled) {
+  ['resume-btn', 'fallback-btn', 'cancel-btn'].forEach(id => {
+    const btn = document.getElementById(id);
+    if (btn) btn.disabled = !!disabled;
+  });
+}
+
+function updatePauseCountdownText() {
+  const timeoutEl = document.getElementById('pause-timeout');
+  if (!timeoutEl) return;
+  if (!state.pauseInfo.timeoutAt) {
+    timeoutEl.textContent = '';
+    return;
+  }
+  const diffMs = Math.max(0, new Date(state.pauseInfo.timeoutAt).getTime() - Date.now());
+  const totalSec = Math.floor(diffMs / 1000);
+  const min = Math.floor(totalSec / 60);
+  const sec = totalSec % 60;
+  timeoutEl.textContent = `Automatikus fallback: ${min}:${String(sec).padStart(2, '0')}`;
+}
+
+function stopPauseCountdown() {
+  if (state.pauseInfo.intervalId) {
+    clearInterval(state.pauseInfo.intervalId);
+    state.pauseInfo.intervalId = null;
+  }
+}
+
+function showPausedPanel(payload = {}) {
+  state.pauseInfo.active = true;
+  state.pauseInfo.timeoutAt = payload.pause_timeout_at || null;
+  state.pauseInfo.challengeUrl = payload.challenge_url || null;
+
+  const panel = document.getElementById('pause-panel');
+  const reasonEl = document.getElementById('pause-reason');
+  const spinner = document.getElementById('progress-spinner');
+  if (!panel || !reasonEl || !spinner) return;
+
+  spinner.classList.add('hidden');
+  panel.classList.remove('hidden');
+  setPauseButtonsDisabled(false);
+
+  const reason = payload.reason || 'bot_check';
+  const challengePart = state.pauseInfo.challengeUrl ? ` URL: ${state.pauseInfo.challengeUrl}` : '';
+  reasonEl.textContent = `Challenge: ${reason}. Oldd meg a browserben, majd kattints a Folytatasra.${challengePart}`;
+
+  stopPauseCountdown();
+  updatePauseCountdownText();
+  state.pauseInfo.intervalId = setInterval(updatePauseCountdownText, 1000);
+}
+
+function hidePausedPanel() {
+  state.pauseInfo.active = false;
+  state.pauseInfo.timeoutAt = null;
+  state.pauseInfo.challengeUrl = null;
+  stopPauseCountdown();
+
+  const panel = document.getElementById('pause-panel');
+  const spinner = document.getElementById('progress-spinner');
+  const timeoutEl = document.getElementById('pause-timeout');
+  if (panel) panel.classList.add('hidden');
+  if (spinner) spinner.classList.remove('hidden');
+  if (timeoutEl) timeoutEl.textContent = '';
+  setPauseButtonsDisabled(false);
+}
+
+async function postRunAction(action) {
+  setPauseButtonsDisabled(true);
+  try {
+    const resp = await fetch(`/api/run/${action}`, { method: 'POST' });
+    const body = await resp.json().catch(() => ({}));
+    if (!resp.ok) {
+      throw new Error(body.error || 'Action failed');
+    }
+  } catch (err) {
+    setPauseButtonsDisabled(false);
+    showProgressError(err.message || 'Action failed');
+  }
+}
+
+async function resumeRun() {
+  await postRunAction('resume');
+}
+
+async function fallbackRun() {
+  await postRunAction('fallback');
+}
+
+async function cancelRun() {
+  await postRunAction('cancel');
+}
+function hideProgress() {
+  hidePausedPanel();
+  document.getElementById('progress-overlay').classList.add('hidden');
+  document.getElementById('progress-message').textContent = 'Indítás...';
+  document.getElementById('progress-message').style.color = '';
+  document.getElementById('progress-fill').style.width = '0%';
+}
+
+// ===== RENDER =====
+function renderAll() {
+  renderScrapeWarning();
+  renderTopCards();
+  renderTable();
+
+  const d = state.data;
+  if (d && d.analyzed_at) {
+    document.getElementById('last-updated').textContent =
+      'Frissítve: ' + new Date(d.analyzed_at).toLocaleString('hu-HU');
+  }
+}
+
+function renderEmpty(message) {
+  renderScrapeWarning();
+  document.getElementById('top-cards').innerHTML =
+    `<div class="empty-state"><p>${message}</p></div>`;
+  document.getElementById('table-body').innerHTML = '';
+  document.getElementById('table-count').textContent = '';
+}
+
+function renderScrapeWarning() {
+  const warningEl = document.getElementById('scrape-warning');
+  if (!warningEl) return;
+
+  const meta = state.data && state.data.scrape_meta;
+  const allListings = (state.data && (state.data.allPreselected || state.data.listings || [])) || [];
+
+  if (meta && meta.fallback_used) {
+    const fallbackCount = allListings.filter(l => l && l.source === 'list_card').length;
+    const detailSuccess = Number(meta.detail_success || 0);
+    const detailAttempted = Number(meta.detail_attempted || 0);
+    const manualFallback = !!meta.manual_fallback_triggered;
+    const runSource = String(meta.run_source || '').toLowerCase();
+    let modeText = 'automatikus fallback';
+    if (manualFallback) {
+      modeText = 'kezi fallback';
+    } else if (runSource === 'cron') {
+      modeText = 'automatikus fallback (cron)';
+    }
+    warningEl.textContent = `Figyelmeztetes (${modeText}): detail siker: ${detailSuccess}/${detailAttempted}, listakartya fallback: ${fallbackCount} hirdetes.`;
+    warningEl.classList.remove('hidden');
+    return;
+  }
+
+  if (state.runtimeWarnings.length > 0) {
+    const latest = state.runtimeWarnings[state.runtimeWarnings.length - 1];
+    warningEl.textContent = latest.message || 'FigyelmeztetÒ©s a futÒ¡s sorÒ¡n.';
+    warningEl.classList.remove('hidden');
+    return;
+  }
+
+  warningEl.textContent = '';
+  warningEl.classList.add('hidden');
+}
+
+function renderTopCards() {
+  const container = document.getElementById('top-cards');
+  const listings = (state.data && state.data.topListings) || [];
+
+  document.getElementById('top-count').textContent = listings.length;
+
+  if (listings.length === 0) {
+    container.innerHTML = `<div class="empty-state">
+      <p>Még nincs AI-elemzés.</p>
+      <p>Kattints a <strong>Frissítés</strong> gombra!</p>
+    </div>`;
+    return;
+  }
+
+  container.innerHTML = listings.map(l => renderListingCard(l)).join('');
+}
+
+function renderListingCard(l) {
+  const v = l.verdict || {};
+  const score = v.overall_score;
+  const scoreNum = parseFloat(score) || 0;
+  const scoreClass = scoreNum >= 7.5 ? 'score-green' : scoreNum >= 5 ? 'score-yellow' : 'score-red';
+  const scoreText = score != null ? `${score}/10` : '?';
+
+  const rec = (v.recommendation || '').toUpperCase();
+  const recClass = rec.includes('AJÁNLOTT') && !rec.includes('NEM')
+    ? 'rec-ajanlott'
+    : rec.includes('NEM')
+      ? 'rec-nem-ajanlott'
+      : 'rec-megfontolhato';
+
+  const priceText = l.price_huf_monthly
+    ? l.price_huf_monthly.toLocaleString('hu-HU') + ' Ft/hó'
+    : 'Ár ismeretlen';
+
+  const totalCost = v.estimated_total_monthly_cost
+    ? v.estimated_total_monthly_cost.toLocaleString('hu-HU') + ' Ft/hó (becsült, rezsivel)'
+    : null;
+
+  const chips = [
+    l.price_huf_monthly ? `<span class="meta-chip price">${priceText}</span>` : '',
+    l.area_sqm ? `<span class="meta-chip">${l.area_sqm} m²</span>` : '',
+    l.rooms ? `<span class="meta-chip">${l.rooms} szoba</span>` : '',
+    l.floor ? `<span class="meta-chip">${l.floor}</span>` : '',
+    l.has_elevator === true ? `<span class="meta-chip">Lift</span>` : '',
+    l.has_balcony === true ? `<span class="meta-chip">Erkély</span>` : '',
+    l.furnished ? `<span class="meta-chip">${l.furnished}</span>` : '',
+  ].filter(Boolean).join('');
+
+  const images = (l.image_urls || []).slice(0, 3);
+  const imgHtml = images.length > 0
+    ? `<div class="card-images">${images.map(src =>
+        `<img src="${escHtml(src)}" alt="Hirdetés kép" loading="lazy" onerror="this.style.display='none'">`
+      ).join('')}</div>`
+    : '';
+
+  const prosHtml = (v.pros || []).length > 0
+    ? `<ul class="pros-list">${v.pros.map(p => `<li>${escHtml(p)}</li>`).join('')}</ul>`
+    : '<p class="text-muted">Nincs adat</p>';
+
+  const consHtml = (v.cons || []).length > 0
+    ? `<ul class="cons-list">${v.cons.map(c => `<li>${escHtml(c)}</li>`).join('')}</ul>`
+    : '<p class="text-muted">Nincs adat</p>';
+
+  const redFlagsHtml = (v.red_flags || []).length > 0
+    ? `<details>
+        <summary>Piros zászlók (${v.red_flags.length})</summary>
+        <div class="details-content">
+          <ul class="red-flags-list">${v.red_flags.map(r => `<li>${escHtml(r)}</li>`).join('')}</ul>
+        </div>
+      </details>`
+    : '';
+
+  const tipsHtml = (v.practical_tips || []).length > 0
+    ? `<details>
+        <summary>Tippek megtekintéshez</summary>
+        <div class="details-content">
+          <ul class="tips-list">${v.practical_tips.map(t => `<li>${escHtml(t)}</li>`).join('')}</ul>
+        </div>
+      </details>`
+    : '';
+
+  return `
+    <div class="listing-card">
+      <div class="card-top">
+        <div>
+          <div style="font-weight:700; font-size:16px; margin-bottom:4px">${escHtml(l.title || l.district || 'Hirdetés')}</div>
+          <div class="card-location">${escHtml(l.district || '')}${l.address && l.address !== l.district ? ' · ' + escHtml(l.address) : ''}</div>
+        </div>
+        <div class="score-badge ${scoreClass}">${scoreText}</div>
+      </div>
+
+      ${imgHtml}
+
+      <div class="card-meta">${chips}</div>
+
+      ${v.recommendation ? `<div class="recommendation-badge ${recClass}">${escHtml(v.recommendation)}</div>` : ''}
+
+      ${totalCost ? `<p class="total-cost">Becsült teljes havi költség: <strong>${totalCost}</strong></p>` : ''}
+
+      ${v.summary ? `<p class="card-summary">${escHtml(v.summary)}</p>` : ''}
+
+      <details>
+        <summary>Előnyök és hátrányok</summary>
+        <div class="details-content">
+          <div class="pros-cons">
+            <div>
+              <p class="col-header">Előnyök</p>
+              ${prosHtml}
+            </div>
+            <div>
+              <p class="col-header">Hátrányok</p>
+              ${consHtml}
+            </div>
+          </div>
+        </div>
+      </details>
+
+      ${v.price_analysis || v.location_analysis ? `
+      <details>
+        <summary>Ár- és helyszínelemzés</summary>
+        <div class="details-content">
+          ${v.price_analysis ? `<p><strong>Ár:</strong> ${escHtml(v.price_analysis)}</p>` : ''}
+          ${v.location_analysis ? `<p><strong>Helyszín:</strong> ${escHtml(v.location_analysis)}</p>` : ''}
+        </div>
+      </details>` : ''}
+
+      ${redFlagsHtml}
+      ${tipsHtml}
+
+      <a href="${escHtml(l.url)}" target="_blank" rel="noopener" class="btn-link">Hirdetés megnyitása</a>
+    </div>
+  `;
+}
+
+// ===== TABLE =====
+function getTableListings() {
+  if (!state.data) return [];
+  const all = state.data.allPreselected || state.data.listings || [];
+  let result = [...all];
+
+  const district = document.getElementById('f-district').value.toLowerCase().trim();
+  const priceMax = parseInt(document.getElementById('f-price-max').value);
+  const areaMin = parseInt(document.getElementById('f-area-min').value);
+  const elevator = document.getElementById('f-elevator').value;
+  const furnished = document.getElementById('f-furnished').value;
+
+  if (district) result = result.filter(l => (l.district || '').toLowerCase().includes(district));
+  if (!isNaN(priceMax) && priceMax > 0) result = result.filter(l => l.price_huf_monthly && l.price_huf_monthly <= priceMax);
+  if (!isNaN(areaMin) && areaMin > 0) result = result.filter(l => l.area_sqm && l.area_sqm >= areaMin);
+  if (elevator === 'yes') result = result.filter(l => l.has_elevator === true);
+  if (elevator === 'no') result = result.filter(l => l.has_elevator === false);
+  if (furnished === 'yes') result = result.filter(l => {
+    const f = (l.furnished || '').toLowerCase();
+    return f.includes('igen') || f.includes('igen') || f === 'yes' || f.includes('bútoroz');
+  });
+  if (furnished === 'no') result = result.filter(l => {
+    const f = (l.furnished || '').toLowerCase();
+    return f.includes('nem') || f === 'no' || f.includes('bútorozatlan');
+  });
+
+  if (state.sortKey) {
+    result.sort((a, b) => {
+      const av = a[state.sortKey];
+      const bv = b[state.sortKey];
+      if (av == null) return 1;
+      if (bv == null) return -1;
+      return (av < bv ? -1 : av > bv ? 1 : 0) * state.sortDir;
+    });
+  }
+
+  return result;
+}
+
+function renderTable() {
+  const listings = getTableListings();
+  const tbody = document.getElementById('table-body');
+  document.getElementById('table-count').textContent = `${listings.length} hirdetés`;
+
+  // Build lookup map for modal
+  window._listingsById = {};
+  listings.forEach(l => { window._listingsById[l.id] = l; });
+
+  if (listings.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="10" style="text-align:center;padding:32px;color:var(--text-muted)">Nincs a szűrési feltételeknek megfelelő hirdetés</td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = listings.map(l => {
+    const elevatorTag = l.has_elevator === true
+      ? '<span class="tag tag-yes">Igen</span>'
+      : l.has_elevator === false
+        ? '<span class="tag tag-no">Nem</span>'
+        : '<span class="tag tag-unknown">?</span>';
+
+    const furnishedVal = l.furnished || '';
+    const furnishedLower = furnishedVal.toLowerCase();
+    const furnishedTag = furnishedLower === 'igen' || (furnishedLower.includes('bútoroz') && !furnishedLower.includes('atlan'))
+      ? '<span class="tag tag-yes">Igen</span>'
+      : furnishedLower === 'nem' || furnishedLower.includes('atlan')
+        ? '<span class="tag tag-no">Nem</span>'
+        : furnishedVal
+          ? `<span class="tag tag-unknown">${escHtml(furnishedVal.substring(0, 10))}</span>`
+          : '<span class="tag tag-unknown">?</span>';
+
+    const petTag = l.pet_friendly === true
+      ? '<span class="tag tag-yes">Igen</span>'
+      : l.pet_friendly === false
+        ? '<span class="tag tag-no">Nem</span>'
+        : '<span class="tag tag-unknown">?</span>';
+
+    const rezsiFmt = l.utilities_huf ? l.utilities_huf.toLocaleString('hu-HU') + ' Ft' : '-';
+
+    return `<tr onclick="openDetailModal('${escHtml(String(l.id))}')">
+      <td>${escHtml(l.district || '-')}</td>
+      <td>${l.price_huf_monthly ? l.price_huf_monthly.toLocaleString('hu-HU') + ' Ft' : '-'}</td>
+      <td>${l.area_sqm ? l.area_sqm + ' m²' : '-'}</td>
+      <td>${l.rooms || '-'}</td>
+      <td>${escHtml(l.floor || '-')}</td>
+      <td>${elevatorTag}</td>
+      <td>${furnishedTag}</td>
+      <td>${petTag}</td>
+      <td>${rezsiFmt}</td>
+      <td><a href="${escHtml(l.url)}" target="_blank" rel="noopener" onclick="event.stopPropagation()">&#8599; Link</a></td>
+    </tr>`;
+  }).join('');
+}
+
+function sortTable(key) {
+  if (state.sortKey === key) {
+    state.sortDir *= -1;
+  } else {
+    state.sortKey = key;
+    state.sortDir = 1;
+  }
+  renderTable();
+}
+
+function resetFilters() {
+  document.getElementById('f-district').value = '';
+  document.getElementById('f-price-max').value = '';
+  document.getElementById('f-area-min').value = '';
+  document.getElementById('f-elevator').value = '';
+  document.getElementById('f-furnished').value = '';
+  renderTable();
+}
+
+// ===== THEME =====
+function toggleTheme() {
+  state.theme = state.theme === 'dark' ? 'light' : 'dark';
+  document.documentElement.setAttribute('data-theme', state.theme);
+  localStorage.setItem('theme', state.theme);
+  document.getElementById('theme-toggle').textContent = state.theme === 'dark' ? 'Light' : 'Dark';
+}
+
+// ===== UTILS =====
+function escHtml(str) {
+  if (!str) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+// ===== START =====
+init();
+</script>
+
+<!-- ===== DETAIL MODAL ===== -->
+<div id="detail-modal" class="modal-overlay" onclick="handleModalOverlayClick(event)">
+  <div class="modal-box">
+    <button class="modal-close" onclick="closeDetailModal()">?</button>
+    <div id="modal-content"></div>
+  </div>
+</div>
+
+<script>
+function boolTag(val) {
+  if (val === true) return '<span class="tag tag-yes">Igen</span>';
+  if (val === false) return '<span class="tag tag-no">Nem</span>';
+  return '<span class="tag tag-unknown">?</span>';
+}
+
+function fmtVal(v, fallback) {
+  if (v === null || v === undefined || v === '') return fallback || '-';
+  return escHtml(String(v));
+}
+
+function modalRow(label, value) {
+  return `<div class="modal-row"><span class="modal-row-label">${label}</span><span class="modal-row-value">${value}</span></div>`;
+}
+
+function openDetailModal(id) {
+  const l = (window._listingsById || {})[id];
+  if (!l) return;
+
+  const elevatorTag = boolTag(l.has_elevator);
+  const furnishedVal = l.furnished || '';
+  const furnishedLower = furnishedVal.toLowerCase();
+  const furnishedTag = furnishedLower === 'igen' || (furnishedLower.includes('bútoroz') && !furnishedLower.includes('atlan'))
+    ? '<span class="tag tag-yes">Igen</span>'
+    : furnishedLower === 'nem' || furnishedLower.includes('atlan')
+      ? '<span class="tag tag-no">Nem</span>'
+      : furnishedVal ? `<span class="tag tag-unknown">${escHtml(furnishedVal)}</span>` : boolTag(null);
+
+  document.getElementById('modal-content').innerHTML = `
+    <div class="modal-title">${escHtml(l.title || l.district || 'Ingatlan')}</div>
+    <div class="modal-subtitle">${escHtml(l.address && l.address !== l.title ? l.address : '')}</div>
+
+    <div class="modal-hero">
+      <div>
+        <div class="modal-hero-label">Ár / hó</div>
+        <div class="modal-hero-value">${l.price_huf_monthly ? l.price_huf_monthly.toLocaleString('hu-HU') + ' Ft' : '-'}</div>
+      </div>
+      <div>
+        <div class="modal-hero-label">Alapterület</div>
+        <div class="modal-hero-value">${l.area_sqm ? l.area_sqm + ' m²' : '-'}</div>
+      </div>
+      <div>
+        <div class="modal-hero-label">Szobák</div>
+        <div class="modal-hero-value">${l.rooms || '-'}</div>
+      </div>
+      ${l.deposit_huf ? `<div><div class="modal-hero-label">Kaució</div><div class="modal-hero-value">${l.deposit_huf.toLocaleString('hu-HU')} Ft</div></div>` : ''}
+    </div>
+
+    <div class="modal-section">
+      <h4>Ingatlan részletei</h4>
+      <div class="modal-grid">
+        ${modalRow('Emelet', fmtVal(l.floor))}
+        ${modalRow('Lift', elevatorTag)}
+        ${modalRow('Bútorozott', furnishedTag)}
+        ${modalRow('Légkondi', boolTag(l.has_ac))}
+        ${modalRow('Erkély', l.has_balcony === true ? (l.balcony_size ? escHtml(l.balcony_size) : '<span class="tag tag-yes">Igen</span>') : boolTag(l.has_balcony))}
+        ${modalRow('Parkoló', l.has_parking === true ? (l.parking_type ? escHtml(l.parking_type) : '<span class="tag tag-yes">Igen</span>') : l.parking_type ? escHtml(l.parking_type) : boolTag(l.has_parking))}
+        ${modalRow('Kisállat', l.pet_friendly === true ? '<span class="tag tag-yes">Igen</span>' : l.pet_friendly === false ? '<span class="tag tag-no">Nem</span>' : boolTag(null))}
+        ${modalRow('Dohányzás', l.smoking_allowed === true ? '<span class="tag tag-yes">Megengedett</span>' : l.smoking_allowed === false ? '<span class="tag tag-no">Nem</span>' : boolTag(null))}
+        ${modalRow('Gépesített', boolTag(l.equipped))}
+        ${modalRow('Kertkapcsolatos', boolTag(l.has_garden_access))}
+        ${modalRow('Tetőtér', boolTag(l.has_attic))}
+        ${modalRow('Akadálymentes', boolTag(l.accessible))}
+        ${l.bathroom_config ? modalRow('Fürdő & WC', fmtVal(l.bathroom_config)) : ''}
+        ${l.orientation ? modalRow('Tájolás', fmtVal(l.orientation)) : ''}
+        ${l.view ? modalRow('Kilátás', fmtVal(l.view)) : ''}
+        ${l.ceiling_height ? modalRow('Belmagasság', fmtVal(l.ceiling_height)) : ''}
+        ${l.comfort ? modalRow('Komfort', fmtVal(l.comfort)) : ''}
+        ${l.condition ? modalRow('Állapot', fmtVal(l.condition)) : ''}
+        ${l.available_from ? modalRow('Beköltözhető', fmtVal(l.available_from)) : ''}
+        ${l.min_rental_period ? modalRow('Min. bérleti idő', fmtVal(l.min_rental_period)) : ''}
+      </div>
+    </div>
+
+    <div class="modal-section">
+      <h4>Fenntarthatóság & épület</h4>
+      <div class="modal-grid">
+        ${l.utilities_huf ? modalRow('Rezsiköltség', l.utilities_huf.toLocaleString('hu-HU') + ' Ft/hó') : ''}
+        ${l.common_cost_huf ? modalRow('Közös költség', l.common_cost_huf.toLocaleString('hu-HU') + ' Ft/hó') : ''}
+        ${l.heating_type ? modalRow('Fűtés', fmtVal(l.heating_type)) : ''}
+        ${l.insulation ? modalRow('Szigetelés', fmtVal(l.insulation)) : ''}
+        ${l.energy_certificate ? modalRow('Energetikai', fmtVal(l.energy_certificate)) : ''}
+        ${l.build_year ? modalRow('Építés éve', fmtVal(l.build_year)) : ''}
+        ${l.property_type ? modalRow('Típus', fmtVal(l.property_type)) : ''}
+      </div>
+    </div>
+
+    ${l.description ? `
+    <div class="modal-section">
+      <h4>Leírás</h4>
+      <div class="modal-desc">${escHtml(l.description)}</div>
+    </div>` : ''}
+
+    <div class="modal-actions">
+      <a href="${escHtml(l.url)}" target="_blank" rel="noopener" class="btn-primary" style="display:inline-block;padding:8px 18px;border-radius:6px;background:var(--accent);color:#fff;font-weight:600;font-size:14px;text-decoration:none">Megnyitás ingatlan.com-on</a>
+    </div>
+  `;
+
+  document.getElementById('detail-modal').classList.add('active');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeDetailModal() {
+  document.getElementById('detail-modal').classList.remove('active');
+  document.body.style.overflow = '';
+}
+
+function handleModalOverlayClick(e) {
+  if (e.target === document.getElementById('detail-modal')) closeDetailModal();
+}
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') closeDetailModal();
+});
+</script>
+</body>
+</html>
+
