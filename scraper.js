@@ -1015,6 +1015,7 @@ async function saveResults(listings, scrapeMeta) {
       detail_attempted: scrapeMeta.detail_attempted,
       detail_success: scrapeMeta.detail_success,
       detail_blocked: scrapeMeta.detail_blocked,
+      cache_hits: scrapeMeta.cache_hits,
       fallback_used: scrapeMeta.fallback_used,
       warnings: scrapeMeta.warnings,
       pause_count: scrapeMeta.pause_count,
@@ -1029,6 +1030,30 @@ async function saveResults(listings, scrapeMeta) {
   fs.writeFileSync('data/latest.json', JSON.stringify(data, null, 2));
   fs.writeFileSync(`data/history/${today}.json`, JSON.stringify(data, null, 2));
   console.log(`[scraper] Saved ${listings.length} listings to data/latest.json and data/history/${today}.json`);
+}
+
+// --- History Cache ---
+function loadHistoryCache() {
+  const cache = new Map();
+  const historyDir = 'data/history';
+  if (!fs.existsSync(historyDir)) return cache;
+
+  const today = new Date().toISOString().split('T')[0];
+  const files = fs.readdirSync(historyDir)
+    .filter(f => f.endsWith('.json') && f.replace('.json', '') !== today)
+    .sort();
+
+  for (const file of files) {
+    try {
+      const data = JSON.parse(fs.readFileSync(`${historyDir}/${file}`, 'utf8'));
+      for (const listing of (data.listings || [])) {
+        if (listing.id) cache.set(listing.id, listing);
+      }
+    } catch {}
+  }
+
+  console.log(`[scraper] History cache betöltve: ${cache.size} ismert listing`);
+  return cache;
 }
 
 // --- Main Run ---
@@ -1050,6 +1075,7 @@ async function run(progressCallback = () => {}, options = {}) {
     detail_attempted: 0,
     detail_success: 0,
     detail_blocked: 0,
+    cache_hits: 0,
     fallback_used: false,
     warnings: [],
     consecutive_blocked: 0,
@@ -1142,6 +1168,7 @@ async function run(progressCallback = () => {}, options = {}) {
 
     const total = Math.min(listingUrls.length, MAX_LISTINGS);
     const detailListings = [];
+    const historyCache = loadHistoryCache();
     const detailPage = await context.newPage();
     await installCookiebotGuard(detailPage);
 
@@ -1158,6 +1185,13 @@ async function run(progressCallback = () => {}, options = {}) {
         total,
         progress: (i + 1) / total,
       });
+
+      const listingId = extractListingId(url);
+      if (listingId && historyCache.has(listingId)) {
+        detailListings.push(historyCache.get(listingId));
+        scrapeMeta.cache_hits++;
+        continue;
+      }
 
       let retryCurrentListing = false;
       let manualResumeRetriesForListing = 0;

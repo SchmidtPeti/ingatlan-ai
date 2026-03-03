@@ -2,10 +2,12 @@ name: Deploy Kővári Verdict
 
 on:
   push:
-    branches: [main]
+    branches: [master]
     paths:
       - 'data/analysis/**'
       - 'generate-static.js'
+    tags:
+      - 'v*'
   workflow_dispatch:
 
 permissions:
